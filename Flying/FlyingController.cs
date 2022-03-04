@@ -45,8 +45,8 @@
             get => isFlyingAllowed;
             set
             {
-                if (value && isFlying) ToggleFlying();
                 isFlyingAllowed = value;
+                if (value && isFlying) ToggleFlying();
             }
         }
 
