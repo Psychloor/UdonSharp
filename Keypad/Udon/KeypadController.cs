@@ -166,6 +166,8 @@ namespace Psychloor.Keypad
         [PublicAPI]
         public void _ButtonConfirm()
         {
+            PlayButtonClip();
+            if (string.IsNullOrEmpty(input)) return;
             if (input.Equals(password, StringComparison.Ordinal))
             {
                 if (isSynced)
@@ -193,7 +195,17 @@ namespace Psychloor.Keypad
         [PublicAPI]
         public void _ButtonReset()
         {
+            PlayButtonClip();
             input = string.Empty;
+        }
+
+        public void _ButtonCustom(string text)
+        {
+            PlayButtonClip();
+            input += text;
+
+            if(autoCheck && input.Length == password.Length)
+                _ButtonConfirm();
         }
     
         [PublicAPI]
