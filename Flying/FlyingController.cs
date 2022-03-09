@@ -1,6 +1,8 @@
 ﻿namespace Psychloor.Udon.Flying
 {
 
+    using System;
+
     using UdonSharp;
 
     using UnityEngine;
@@ -12,7 +14,7 @@
     {
         // @formatter:off
         [SerializeField, FieldChangeCallback(nameof(IsFlyingAllowed))]
-        private bool isFlyingAllowed;
+        private bool isFlyingAllowed = true;
         public KeyCode desktopUpKey = KeyCode.E, desktopDownKey = KeyCode.Q;
         public float flyingSpeed = 10f;
 
@@ -34,11 +36,10 @@
 
         private bool isInVR;
 
-        private float lastTimeJumped = 200f;
+        private double lastTimeJumped = double.MaxValue;
+        private bool previousJumpInput;
 
         private VRCPlayerApi localPlayer;
-
-        private float previousGravityStrength;
         // @formatter:on
         public bool IsFlyingAllowed
         {
@@ -52,18 +53,21 @@
 
         public override void InputJump(bool value, UdonInputEventArgs _)
         {
-            if (value)
+            if (value && !previousJumpInput)
             {
                 // Double jump to toggle flying
-                if (Time.time - lastTimeJumped <= jumpTimeThreshold)
+                if (Networking.GetServerTimeInSeconds() - lastTimeJumped <= jumpTimeThreshold)
                 {
+                    lastTimeJumped = Networking.GetServerTimeInSeconds() + (jumpTimeThreshold * 1.2f);
                     ToggleFlying();
                 }
                 else
                 {
-                    lastTimeJumped = Time.time;
+                    lastTimeJumped = Networking.GetServerTimeInSeconds();
                 }
             }
+
+            previousJumpInput = value;
         }
 
         public override void InputLookVertical(float value, UdonInputEventArgs _)
@@ -81,6 +85,12 @@
             forwardInput = value;
         }
 
+        private void OnEnable()
+        {
+            if (Networking.LocalPlayer == null) return;
+            isInVR = Networking.LocalPlayer.IsUserInVR();
+        }
+
         private void OnDisable()
         {
             if (isFlying) ToggleFlying();
@@ -88,26 +98,26 @@
 
         private void Start()
         {
-            if (Networking.LocalPlayer != null)
-                isInVR = Networking.LocalPlayer.IsUserInVR();
+            if (Networking.LocalPlayer == null) return;
+            isInVR = Networking.LocalPlayer.IsUserInVR();
         }
 
         private void ToggleFlying()
         {
             localPlayer = Networking.LocalPlayer;
-            if (!isFlying) previousGravityStrength = localPlayer.GetGravityStrength();
 
             isFlying = !isFlying && IsFlyingAllowed;
 
-            localPlayer.SetGravityStrength(isFlying ? 0f : previousGravityStrength);
-            for (var i = 0; i < listeners.Length; i++)
-            {
-                if (listeners[i])
-                    listeners[i].SendCustomEvent(isFlying ? onFlyingEnabledName : onFlyingDisabledName);
-            }
+            if (listeners != null
+                && listeners.Length > 0)
+                for (var i = 0; i < listeners.Length; i++)
+                {
+                    if (listeners[i])
+                        listeners[i].SendCustomEvent(isFlying ? onFlyingEnabledName : onFlyingDisabledName);
+                }
         }
 
-        private void Update()
+        private void FixedUpdate()
         {
             if (!isFlying) return;
             currentSpeed = flyingSpeed;
@@ -120,11 +130,16 @@
                 if (Input.GetKey(KeyCode.LeftShift)) currentSpeed *= 2f;
             }
 
+            if (Mathf.Approximately(Mathf.Abs(forwardInput + sideInput + verticalInput), 0.05f))
+            {
+                localPlayer.SetVelocity(-Physics.gravity * (localPlayer.GetGravityStrength() * Time.deltaTime));
+                return;
+            }
+
             VRCPlayerApi.TrackingData viewPointData = localPlayer.GetTrackingData(VRCPlayerApi.TrackingDataType.Head);
             forwardVector = viewPointData.rotation * Vector3.forward * (forwardInput * currentSpeed);
             sideVector = viewPointData.rotation * Vector3.right * (sideInput * currentSpeed);
             verticalVector = Vector3.up * (verticalInput * currentSpeed);
-
             localPlayer.SetVelocity(forwardVector + sideVector + verticalVector);
         }
 
