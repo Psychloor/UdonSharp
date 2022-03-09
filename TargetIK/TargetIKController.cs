@@ -1,10 +1,8 @@
-﻿namespace Psychloor.Udon
+﻿namespace Psychloor.Udon.TargetIK
 {
 
     using System;
     using System.Linq;
-
-    using JetBrains.Annotations;
 
     using UdonSharp;
 
@@ -38,30 +36,6 @@
 
         private Animator animator;
         private Transform[] boneTransforms;
-
-        public string[] GetHumanBodyBones()
-        {
-            return new string[]
-                       {
-                           "Hips", "LeftUpperLeg", "RightUpperLeg", "LeftLowerLeg", "RightLowerLeg", "LeftFoot",
-                           "RightFoot", "Spine", "Chest", "Neck", "Head", "LeftShoulder", "RightShoulder",
-                           "LeftUpperArm", "RightUpperArm", "LeftLowerArm", "RightLowerArm", "LeftHand", "RightHand",
-                           "LeftToes", "RightToes", "LeftEye", "RightEye", "Jaw", "LeftThumbProximal",
-                           "LeftThumbIntermediate", "LeftThumbDistal", "LeftIndexProximal", "LeftIndexIntermediate",
-                           "LeftIndexDistal", "LeftMiddleProximal", "LeftMiddleIntermediate", "LeftMiddleDistal",
-                           "LeftRingProximal", "LeftRingIntermediate", "LeftRingDistal", "LeftLittleProximal",
-                           "LeftLittleIntermediate", "LeftLittleDistal", "RightThumbProximal", "RightThumbIntermediate",
-                           "RightThumbDistal", "RightIndexProximal", "RightIndexIntermediate", "RightIndexDistal",
-                           "RightMiddleProximal", "RightMiddleIntermediate", "RightMiddleDistal", "RightRingProximal",
-                           "RightRingIntermediate", "RightRingDistal", "RightLittleProximal", "RightLittleIntermediate",
-                           "RightLittleDistal", "UpperChest"
-                       };
-        }
-
-        private void OnAnimatorIK(int layerIndex)
-        {
-
-        }
 
         public void LateUpdate()
         {
@@ -110,26 +84,6 @@
             boneTransform.rotation = blendedRotation * boneTransform.rotation;
         }
 
-        private void OnEnable()
-        {
-            /*animator = GetComponent<Animator>();
-            boneTransforms = new Transform[bone.Length];
-            foreach (int index in bone)
-            {
-                animator.GetBoneTransform((HumanBodyBones)index);
-            }*/
-        }
-
-        private void Start()
-        {
-            /*animator = GetComponent<Animator>();
-            boneTransforms = new Transform[bone.Length];
-            foreach (int i in bone)
-            {
-                animator.GetBoneTransform((HumanBodyBones)i);
-            }*/
-        }
-        
 #if !COMPILER_UDONSHARP && UNITY_EDITOR
         // ReSharper disable once UnusedMember.Global
         public void AfterEditor(SerializedObject obj)
@@ -143,6 +97,12 @@
             {
                 boneTransforms[i] = animator.GetBoneTransform((HumanBodyBones)bone[i]);
             }
+        }
+        
+        public string[] GetHumanBodyBones()
+        {
+            return Enum.GetNames(typeof(HumanBodyBones)).Where(
+                s => !s.Equals(HumanBodyBones.LastBone.ToString(), StringComparison.Ordinal)).ToArray();
         }
 #endif
 
