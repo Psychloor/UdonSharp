@@ -15,6 +15,7 @@
         private bool isFlyingAllowed = true;
         public KeyCode desktopUpKey = KeyCode.E, desktopDownKey = KeyCode.Q;
         public float flyingSpeed = 10f;
+        public float deadZone = 0.05f;
 
         [Tooltip("Max time between jumps to count as double")]
         public float jumpTimeThreshold = .5f;
@@ -28,7 +29,7 @@
 
         private float forwardInput, sideInput, verticalInput;
         private Vector3 inputVector = Vector3.zero;
-        private Vector3 movementVector = Vector3.zero, verticalVector = Vector3.zero, previousPlayerPosition = Vector3.zero;
+        private Vector3 movementVector = Vector3.zero, verticalVector = Vector3.zero;
 
         private bool isFlying;
 
@@ -45,7 +46,7 @@
             set
             {
                 isFlyingAllowed = value;
-                if (value && isFlying) ToggleFlying();
+                if (!value && isFlying) ToggleFlying();
             }
         }
 
@@ -87,7 +88,6 @@
         {
             if (Networking.LocalPlayer == null) return;
             isInVR = Networking.LocalPlayer.IsUserInVR();
-            if (isFlying) ToggleFlying();
             lastTimeJumped = -5000f;
         }
 
@@ -127,15 +127,13 @@
                     if (listeners[i])
                         listeners[i].SendCustomEvent(isFlying ? onFlyingEnabledName : onFlyingDisabledName);
                 }
-
-            previousPlayerPosition = localPlayer.GetPosition();
         }
 
         private void FixedUpdate()
         {
             if (!isFlying) return;
             currentSpeed = flyingSpeed;
-
+            
             if (!isInVR)
             {
                 verticalInput = 0;
@@ -151,15 +149,18 @@
             inputVector.z = forwardInput;
 
             movementVector = viewPointData.rotation * inputVector.normalized
-                                                    * (Mathf.InverseLerp(.05f, 1f, inputVector.magnitude)
+                                                    * (Mathf.InverseLerp(deadZone, 1f, inputVector.magnitude)
                                                        * currentSpeed);
 
-            verticalVector = Vector3.up * (verticalInput * currentSpeed);
+            verticalVector.y = 0f;
+            if (verticalInput > 0f)
+                verticalVector.y = Mathf.InverseLerp(deadZone, 1f, Mathf.Abs(verticalInput)) * currentSpeed;
+            if(verticalInput < 0f)
+                verticalVector.y = -Mathf.InverseLerp(deadZone, 1f, Mathf.Abs(verticalInput)) * currentSpeed;
+
             localPlayer.SetVelocity(
                 movementVector + verticalVector
                                + (-Physics.gravity * (localPlayer.GetGravityStrength() * Time.fixedDeltaTime)));
-
-            previousPlayerPosition = localPlayer.GetPosition();
         }
 
     }
