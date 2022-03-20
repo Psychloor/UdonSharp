@@ -1,5 +1,6 @@
 ﻿namespace Psychloor.Udon.Flying
 {
+
     using UdonSharp;
 
     using UnityEngine;
@@ -133,7 +134,7 @@
         {
             if (!isFlying) return;
             currentSpeed = flyingSpeed;
-            
+
             if (!isInVR)
             {
                 verticalInput = 0;
@@ -152,11 +153,8 @@
                                                     * (Mathf.InverseLerp(deadZone, 1f, inputVector.magnitude)
                                                        * currentSpeed);
 
-            verticalVector.y = 0f;
-            if (verticalInput > 0f)
-                verticalVector.y = Mathf.InverseLerp(deadZone, 1f, Mathf.Abs(verticalInput)) * currentSpeed;
-            if(verticalInput < 0f)
-                verticalVector.y = -Mathf.InverseLerp(deadZone, 1f, Mathf.Abs(verticalInput)) * currentSpeed;
+            verticalVector.y = Mathf.Sign(verticalInput) * Mathf.InverseLerp(deadZone, 1f, Mathf.Abs(verticalInput))
+                                                         * currentSpeed;
 
             localPlayer.SetVelocity(
                 movementVector + verticalVector
